@@ -167,24 +167,21 @@ faasr_test <- function(json_path) {
         stop(sprintf("Function not found in environment: %s (action %s)", func_name, action_name))
       }
 
-      # Create isolated working directory
+      # Create isolated run directory without changing global working directory
       run_dir <- file.path(temp_dir, action_name)
       if (!dir.exists(run_dir)) dir.create(run_dir, recursive = TRUE)
-      orig_wd <- getwd()
       Sys.setenv(FAASR_DATA_ROOT = faasr_data_wd)
-      setwd(run_dir)
+      Sys.setenv(FAASR_RUN_DIR = run_dir)
 
       # Execute function
       f <- get(func_name, envir = .GlobalEnv)
       res <- try(do.call(f, args), silent = TRUE)
       if (inherits(res, "try-error")) {
+        Sys.unsetenv("FAASR_RUN_DIR")
         cli::cli_alert_danger(as.character(res))
-        setwd(orig_wd)  # Restore before stopping
         stop(sprintf("Error executing %s", func_name))
       }
-
-      # Restore working directory after execution
-      setwd(orig_wd)
+      Sys.unsetenv("FAASR_RUN_DIR")
       
       # Mark this execution as complete
       completed <- c(completed, exec_key)
